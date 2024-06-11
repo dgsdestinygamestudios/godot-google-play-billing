@@ -54,7 +54,7 @@ func purchase(product_id: String) -> void:
 
 func _connect_signals() -> void:
 	_library.connect(&"disconnected", _on_disconnected)
-	#_library.connect(&"billing_resume", _on_billing_resume)
+	_library.connect(&"billing_resume", _on_billing_resume)
 	_library.connect(&"setup_finished", _on_setup_finished)
 	_library.connect(&"purchases_updated", _on_purchases_updated)
 	_library.connect(&"acknowledge_purchase_response", _on_acknowledge_purchase_response)
@@ -206,9 +206,9 @@ class Purchase extends RefCounted:
 			is_auto_renewing = data[&"is_auto_renewing"]
 		if &"is_acknowledged" in data:
 			is_acknowledged = data[&"is_acknowledged"]
-		if &"account_identifiers" in data:
+		if &"account_identifiers" in data and data[&"account_identifiers"] is Dictionary and data[&"account_identifiers"] != null:
 			account_identifiers = AccountIdentifiers.new().deserialize(data[&"account_identifiers"])
-		if &"pending_purchase_update" in data:
+		if &"pending_purchase_update" in data and data[&"pending_purchase_update"] is Dictionary and data[&"pending_purchase_update"] != null:
 			pending_purchase_update = PendingPurchaseUpdate.new().deserialize(data[&"pending_purchase_update"])
 		return self
 
@@ -254,12 +254,10 @@ class ProductDetails extends RefCounted:
 			pd_name = data[&"name"]
 		if &"title" in data:
 			title = data[&"title"]
-		if &"one_time_purchase_offer_details" in data:
-			if data[&"one_time_purchase_offer_details"] is Dictionary and data[&"one_time_purchase_offer_details"] != null:
-				one_time_purchase_offer_details = OneTimePurchaseOfferDetails.new().deserialize(data[&"one_time_purchase_offer_details"])
-		if &"subscription_offer_details" in data:
-			if data[&"subscription_offer_details"] is Dictionary and data[&"subscription_offer_details"] != null:
-				subscription_offer_details = SubscriptionOfferDetails.new().deserialize(data[&"subscription_offer_details"])
+		if &"one_time_purchase_offer_details" in data and data[&"one_time_purchase_offer_details"] is Dictionary and data[&"one_time_purchase_offer_details"] != null:
+			one_time_purchase_offer_details = OneTimePurchaseOfferDetails.new().deserialize(data[&"one_time_purchase_offer_details"])
+		if &"subscription_offer_details" in data and data[&"subscription_offer_details"] is Dictionary and data[&"subscription_offer_details"] != null:
+			subscription_offer_details = SubscriptionOfferDetails.new().deserialize(data[&"subscription_offer_details"])
 		return self
 
 class OneTimePurchaseOfferDetails extends RefCounted:
