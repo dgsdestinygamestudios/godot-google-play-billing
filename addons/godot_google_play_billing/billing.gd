@@ -54,7 +54,6 @@ func purchase(product_id: String) -> void:
 
 func _connect_signals() -> void:
 	_library.connect(&"disconnected", _on_disconnected)
-	_library.connect(&"billing_resume", _on_billing_resume)
 	_library.connect(&"setup_finished", _on_setup_finished)
 	_library.connect(&"purchases_updated", _on_purchases_updated)
 	_library.connect(&"acknowledge_purchase_response", _on_acknowledge_purchase_response)
@@ -102,16 +101,6 @@ func _query_product_details(product_ids: PackedStringArray, product_type: String
 func _on_disconnected() -> void:
 	print("[Billing]: Disconnected!")
 	_start_connection()
-
-func _on_billing_resume() -> void:
-	print("[Billing]: Resuming!")
-	if _get_connection_state() != ConnectionState.CONNECTED:
-		return
-	_query_product_details(CONSUMABLE_ITEMS, "inapp")
-	_query_product_details(NON_CONSUMABLE_ITEMS, "inapp")
-	_query_product_details(SUBSCRIPTION_ITEMS, "subs")
-	_query_purchases("inapp")
-	_query_purchases("subs")
 
 func _on_setup_finished(debug_message: String, response_code: ResponseCode) -> void:
 	print("[Billing]: Setup finished!\n\tDebug Message: %s\n\tResponse Code: %s" % [debug_message, response_code])

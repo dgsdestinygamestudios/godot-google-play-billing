@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'org.godotengine.godotgoogleplaybilling'
+    compileSdk 33
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+        buildConfigField("String", "GODOT_PLUGIN_NAME", "\"GodotGooglePlayBilling\"")
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField "String", "pluginPackageName", "\"org.godotengine.godotgoogleplaybilling\""
+            buildConfigField "String", "pluginName", "\"GodotGooglePlayBilling\""
+        }
+        debug {
+            buildConfigField "String", "pluginPackageName", "\"org.godotengine.godotgoogleplaybilling\""
+            buildConfigField "String", "pluginName", "\"GodotGooglePlayBilling\""
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation("org.godotengine:godot:4.2.0.stable")
+    implementation 'com.android.billingclient:billing:7.0.0'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}
