@@ -225,6 +225,11 @@ public class GodotGooglePlayBilling extends GodotPlugin implements PurchasesUpda
     }
 
     @Override
+    public void onMainResume() {
+        emitSignal("resume");
+    }
+
+    @Override
     public void onBillingServiceDisconnected() {
         emitSignal("disconnected");
     }
@@ -253,6 +258,7 @@ public class GodotGooglePlayBilling extends GodotPlugin implements PurchasesUpda
     public Set<SignalInfo> getPluginSignals() {
         Set<SignalInfo> infos = new ArraySet<>();
         infos.add(new SignalInfo("disconnected"));
+        infos.add(new SignalInfo("resume"));
         infos.add(new SignalInfo("setup_finished", String.class, Integer.class)); // debug_message, response_code
         infos.add(new SignalInfo("purchases_updated", String.class, Integer.class, Object[].class)); // debug_message, response_code, purchases
         infos.add(new SignalInfo("acknowledge_purchase_response", String.class, Integer.class)); // debug_message, response_code
