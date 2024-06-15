@@ -5,7 +5,6 @@ import android.util.ArraySet;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.android.billingclient.api.AccountIdentifiers;
 import com.android.billingclient.api.AcknowledgePurchaseParams;
 import com.android.billingclient.api.AcknowledgePurchaseResponseListener;
 import com.android.billingclient.api.BillingClient;
@@ -23,7 +22,6 @@ import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.QueryProductDetailsParams;
 import com.android.billingclient.api.QueryPurchasesParams;
 
-import org.godotengine.godot.Dictionary;
 import org.godotengine.godot.Godot;
 import org.godotengine.godot.plugin.GodotPlugin;
 import org.godotengine.godot.plugin.SignalInfo;
@@ -36,9 +34,9 @@ import java.util.Objects;
 import java.util.Set;
 
 public class GodotGooglePlayBilling extends GodotPlugin implements PurchasesUpdatedListener, BillingClientStateListener, AcknowledgePurchaseResponseListener, ConsumeResponseListener, ProductDetailsResponseListener, PurchasesResponseListener {
-
     private final HashMap<String, ProductDetails> productDetailsHashMap = new HashMap<>();
     private BillingClient billingClient;
+    private String latestToken = "";
 
     public GodotGooglePlayBilling(Godot godot) {
         super(godot);
@@ -72,6 +70,7 @@ public class GodotGooglePlayBilling extends GodotPlugin implements PurchasesUpda
     @UsedByGodot
     public void AcknowledgePurchase(String purchaseToken) {
         AcknowledgePurchaseParams acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchaseToken).build();
+        latestToken = purchaseToken;
         billingClient.acknowledgePurchase(acknowledgePurchaseParams, this);
     }
 
@@ -103,7 +102,7 @@ public class GodotGooglePlayBilling extends GodotPlugin implements PurchasesUpda
     @UsedByGodot
     public void Purchase(String productId, String productType) {
         if (!productDetailsHashMap.containsKey(productId)) {
-            emitSignal("purchase", productId, "Product ID does not exist.", BillingClient.BillingResponseCode.ERROR);
+            emitSignal("purchase_attempt", productId, "Product ID does not exist.", BillingClient.BillingResponseCode.ERROR);
             return;
         }
         ProductDetails productDetails = productDetailsHashMap.get(productId);
@@ -123,105 +122,7 @@ public class GodotGooglePlayBilling extends GodotPlugin implements PurchasesUpda
             return;
         }
         BillingResult billingResult = billingClient.launchBillingFlow(getGodot().getActivity(), billingFlowParams);
-        emitSignal("purchase", productId, billingResult.getDebugMessage(), billingResult.getResponseCode());
-    }
-
-    private Dictionary PurchaseToDictionary(Purchase purchase) {
-        Dictionary data = new Dictionary();
-        if (purchase.getAccountIdentifiers() != null) {
-            data.put("account_identifiers", AccountIdentifiersToDictionary(purchase.getAccountIdentifiers())); // dictionary
-        }
-        if (purchase.getPendingPurchaseUpdate() != null) {
-            data.put("pending_purchase_update", PendingPurchaseUpdateToDictionary(purchase.getPendingPurchaseUpdate())); // dictionary
-        }
-        data.put("products", purchase.getProducts().toArray()); // string array
-        data.put("token", purchase.getPurchaseToken()); // string
-        data.put("state", purchase.getPurchaseState()); // int
-        data.put("is_auto_renewing", purchase.isAutoRenewing()); // bool
-        data.put("original_json", purchase.getOriginalJson()); // string
-        data.put("package_name", purchase.getPackageName()); // string
-        data.put("order_id", purchase.getOrderId()); // string
-        data.put("developer_payload", purchase.getDeveloperPayload()); // string
-        data.put("quantity", purchase.getQuantity()); // int
-        data.put("is_acknowledged", purchase.isAcknowledged()); // bool
-        data.put("signature", purchase.getSignature()); // string
-        return data;
-    }
-
-    private Dictionary AccountIdentifiersToDictionary(AccountIdentifiers accountIdentifiers) {
-        Dictionary data = new Dictionary();
-        data.put("obfuscated_account_id", accountIdentifiers.getObfuscatedAccountId()); // string
-        data.put("obfuscated_profile_id", accountIdentifiers.getObfuscatedProfileId()); // string
-        return data;
-    }
-
-    private Dictionary PendingPurchaseUpdateToDictionary(Purchase.PendingPurchaseUpdate pendingPurchaseUpdate) {
-        Dictionary data = new Dictionary();
-        data.put("token", pendingPurchaseUpdate.getPurchaseToken()); // string
-        data.put("products", pendingPurchaseUpdate.getProducts().toArray()); // string array
-        return data;
-    }
-
-    private Object[] PurchaseListToDictionaryArray(List<Purchase> purchases) {
-        List<Dictionary> list = new ArrayList<>();
-        for (Purchase purchase : purchases) {
-            list.add(PurchaseToDictionary(purchase));
-        }
-        return list.toArray();
-    }
-
-    private Dictionary ProductDetailsToDictionary(ProductDetails productDetails) {
-        Dictionary data = new Dictionary();
-        data.put("id", productDetails.getProductId()); // string
-        data.put("type", productDetails.getProductType()); // string
-        data.put("description", productDetails.getDescription()); // string
-        data.put("name", productDetails.getName()); // string
-        data.put("title", productDetails.getTitle()); // string
-        if (productDetails.getOneTimePurchaseOfferDetails() != null) {
-            data.put("one_time_purchase_offer_details", OneTimePurchaseOfferDetailsToDictionary(productDetails.getOneTimePurchaseOfferDetails())); // dictionary
-        }
-        if (productDetails.getSubscriptionOfferDetails() != null) {
-            data.put("subscription_offer_details", SubscriptionOfferDetailsListToDictionaryArray(productDetails.getSubscriptionOfferDetails())); // array
-        }
-        return data;
-    }
-
-    private Object[] ProductDetailsListToDictionaryArray(List<ProductDetails> productDetails) {
-        List<Dictionary> data = new ArrayList<>();
-        for (ProductDetails details : productDetails) {
-            data.add(ProductDetailsToDictionary(details));
-        }
-        return data.toArray();
-    }
-
-    private Object[] SubscriptionOfferDetailsListToDictionaryArray(List<ProductDetails.SubscriptionOfferDetails> subscriptionOfferDetails) {
-        List<Dictionary> data = new ArrayList<>();
-        for (ProductDetails.SubscriptionOfferDetails details : subscriptionOfferDetails) {
-            data.add(SubscriptionOfferDetailsToDictionary(details));
-        }
-        return data.toArray();
-    }
-
-    private Dictionary OneTimePurchaseOfferDetailsToDictionary(ProductDetails.OneTimePurchaseOfferDetails oneTimePurchaseOfferDetails) {
-        Dictionary data = new Dictionary();
-        data.put("currency_code", oneTimePurchaseOfferDetails.getPriceCurrencyCode()); // string
-        data.put("formatted_price", oneTimePurchaseOfferDetails.getFormattedPrice()); // string
-        data.put("price_amount", oneTimePurchaseOfferDetails.getPriceAmountMicros()); // int
-        return data;
-    }
-
-    private Dictionary SubscriptionOfferDetailsToDictionary(ProductDetails.SubscriptionOfferDetails details) {
-        Dictionary data = new Dictionary();
-        data.put("id", details.getOfferId()); // string
-        data.put("tags", details.getOfferTags().toArray()); // string array
-        data.put("token", details.getOfferToken()); // string
-        data.put("base_plan_id", details.getBasePlanId()); // string
-        data.put("pricing_phases", details.getPricingPhases().getPricingPhaseList().toArray()); // string array
-        if (details.getInstallmentPlanDetails() != null) {
-            data.put("installment_plan_commitment_payments_count", details.getInstallmentPlanDetails().getInstallmentPlanCommitmentPaymentsCount()); // int
-            data.put("subsequent_installment_plan_commitment_payments_count", details.getInstallmentPlanDetails().getSubsequentInstallmentPlanCommitmentPaymentsCount()); // int
-        }
-        return data;
+        emitSignal("purchase_attempt", productId, billingResult.getDebugMessage(), billingResult.getResponseCode());
     }
 
     @Override
@@ -244,7 +145,7 @@ public class GodotGooglePlayBilling extends GodotPlugin implements PurchasesUpda
         if (list == null || list.size() == 0) {
             return;
         }
-        emitSignal("purchases_updated", billingResult.getDebugMessage(), billingResult.getResponseCode(), PurchaseListToDictionaryArray(list));
+        emitSignal("purchases_updated", billingResult.getDebugMessage(), billingResult.getResponseCode(), Converter.PurchaseListToDictionaryArray(list));
     }
 
     @NonNull
@@ -261,22 +162,23 @@ public class GodotGooglePlayBilling extends GodotPlugin implements PurchasesUpda
         infos.add(new SignalInfo("resume"));
         infos.add(new SignalInfo("setup_finished", String.class, Integer.class)); // debug_message, response_code
         infos.add(new SignalInfo("purchases_updated", String.class, Integer.class, Object[].class)); // debug_message, response_code, purchases
-        infos.add(new SignalInfo("acknowledge_purchase_response", String.class, Integer.class)); // debug_message, response_code
-        infos.add(new SignalInfo("consume_response", String.class, String.class, Integer.class)); // debug_message, purchase_token, response_code
+        infos.add(new SignalInfo("acknowledge_purchase_response", String.class, String.class, Integer.class)); // purchase_token, debug_message, response_code
+        infos.add(new SignalInfo("consume_response", String.class, String.class, Integer.class)); // purchase_token, debug_message, response_code
         infos.add(new SignalInfo("product_details_response", String.class, Integer.class, Object[].class)); // error_message, response_code, product_details
-        infos.add(new SignalInfo("purchases_response", String.class, Integer.class, Object[].class)); // error_message, response_code, purchases
-        infos.add(new SignalInfo("purchase", String.class, String.class, Integer.class)); // product_id, error_message, response_code
+        infos.add(new SignalInfo("query_purchases_response", String.class, Integer.class, Object[].class)); // error_message, response_code, purchases
+        infos.add(new SignalInfo("purchase_attempt", String.class, String.class, Integer.class)); // product_id, error_message, response_code
         return infos;
     }
 
     @Override
     public void onAcknowledgePurchaseResponse(@NonNull BillingResult billingResult) {
-        emitSignal("acknowledge_purchase_response", billingResult.getDebugMessage(), billingResult.getResponseCode());
+        emitSignal("acknowledge_purchase_response", latestToken, billingResult.getDebugMessage(), billingResult.getResponseCode());
+        latestToken = "";
     }
 
     @Override
     public void onConsumeResponse(@NonNull BillingResult billingResult, @NonNull String purchaseToken) {
-        emitSignal("consume_response", billingResult.getDebugMessage(), purchaseToken, billingResult.getResponseCode());
+        emitSignal("consume_response", purchaseToken, billingResult.getDebugMessage(), billingResult.getResponseCode());
     }
 
     @Override
@@ -284,11 +186,11 @@ public class GodotGooglePlayBilling extends GodotPlugin implements PurchasesUpda
         for (ProductDetails productDetails : list) {
             productDetailsHashMap.put(productDetails.getProductId(), productDetails);
         }
-        emitSignal("product_details_response", billingResult.getDebugMessage(), billingResult.getResponseCode(), ProductDetailsListToDictionaryArray(list));
+        emitSignal("product_details_response", billingResult.getDebugMessage(), billingResult.getResponseCode(), Converter.ProductDetailsListToDictionaryArray(list));
     }
 
     @Override
     public void onQueryPurchasesResponse(@NonNull BillingResult billingResult, @NonNull List<Purchase> list) {
-        emitSignal("purchases_response", billingResult.getDebugMessage(), billingResult.getResponseCode(), PurchaseListToDictionaryArray(list));
+        emitSignal("query_purchases_response", billingResult.getDebugMessage(), billingResult.getResponseCode(), Converter.PurchaseListToDictionaryArray(list));
     }
 }
